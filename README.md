@@ -2,15 +2,14 @@
 
 A web UI for browsing and downloading [Omicron](https://github.com/oxidecomputer/omicron) TUF repository artifacts from [Buildomat](https://buildomat.eng.oxide.computer).
 
-![Screenshot](screenshot.png)
+<img width="1461" height="905" alt="image" src="https://github.com/user-attachments/assets/03fdfa2a-f5bd-43b0-9317-59001660d120" />
 
 ## Features
 
 - Browse recent commits on `oxidecomputer/omicron` with GitHub API integration
-- See which commits have TUF repo artifacts available (built by the `rot-all` CI job)
+- See which commits have TUF repo artifacts available
 - Download `tuf-mupdate.zip`, `manifest.toml`, and `repo.zip.sha256.txt`
 - Optional server-side storage: save artifacts to a NAS or local disk with progress tracking and cancel support
-- View TUF manifests, SHA-256 checksums, and dvt_dock versions inline
 - Serve previously downloaded artifacts directly from disk
 
 ## Quick Start
@@ -89,7 +88,7 @@ The app wraps the public [Buildomat](https://buildomat.eng.oxide.computer/public
 https://buildomat.eng.oxide.computer/public/file/oxidecomputer/omicron/rot-all/<commit>/
 ```
 
-The GitHub API is used to list recent commits and provide a browsable interface. No GitHub API access is needed for downloading artifacts — only for the commit list.
+The GitHub API is used to list recent commits and provide a browsable interface. No GitHub API access is needed for downloading artifacts.
 
 ## License
 
