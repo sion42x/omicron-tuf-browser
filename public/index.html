@@ -393,6 +393,12 @@
 
       html += `</div>`;
 
+      if (data.manifest) {
+        html += `<div class="section"><div class="section-title">Manifest</div>
+          <div class="manifest-viewer"><div class="manifest-header"><span>manifest.toml</span>
+            <button class="copy-btn" onclick="copyText(document.getElementById('manifestText').textContent)">copy</button>
+          </div><div class="manifest-body" id="manifestText">${esc(data.manifest)}</div></div></div>`;
+      }
       if (data.sha256) {
         html += `<div class="section"><div class="section-title">Verification</div>
           <div class="sha-label">SHA-256</div><div class="sha-display">${esc(data.sha256)}</div></div>`;
@@ -400,12 +406,6 @@
       if (data.dvtDockCommit) {
         html += `<div class="section"><div class="section-title">Related</div>
           <div class="info-row"><span class="info-label">dvt_dock</span><span class="info-value">${esc(data.dvtDockCommit)}</span></div></div>`;
-      }
-      if (data.manifest) {
-        html += `<div class="section"><div class="section-title">Manifest</div>
-          <div class="manifest-viewer"><div class="manifest-header"><span>manifest.toml</span>
-            <button class="copy-btn" onclick="copyText(document.getElementById('manifestText').textContent)">copy</button>
-          </div><div class="manifest-body" id="manifestText">${esc(data.manifest)}</div></div></div>`;
       }
 
       detailContent.innerHTML = html;
