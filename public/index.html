@@ -1,0 +1,516 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Omicron TUF Browser</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=DM+Sans:wght@400;500;600;700&display=swap');
+
+    :root {
+      --bg-primary: #0a0c0f;
+      --bg-secondary: #12151a;
+      --bg-tertiary: #1a1e25;
+      --bg-hover: #222730;
+      --border: #2a2f3a;
+      --border-bright: #3d4455;
+      --text-primary: #e8eaed;
+      --text-secondary: #9aa0ac;
+      --text-dim: #636b78;
+      --accent: #48d597;
+      --accent-dim: #2a7d55;
+      --accent-glow: rgba(72, 213, 151, 0.08);
+      --warning: #e8a838;
+      --error: #e85454;
+      --blue: #5b9cf5;
+      --blue-dim: #2d5a9e;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: 'DM Sans', -apple-system, sans-serif;
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      min-height: 100vh;
+    }
+
+    .header {
+      border-bottom: 1px solid var(--border);
+      padding: 16px 32px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: var(--bg-secondary);
+    }
+    .header-left { display: flex; align-items: center; gap: 16px; }
+    .logo {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 15px; font-weight: 700;
+      color: var(--accent); letter-spacing: -0.5px;
+    }
+    .logo span { color: var(--text-dim); font-weight: 400; }
+    .header-badge {
+      font-family: 'JetBrains Mono', monospace; font-size: 11px;
+      padding: 3px 8px; background: var(--accent-glow);
+      border: 1px solid var(--accent-dim); border-radius: 4px; color: var(--accent);
+    }
+    .header-status { font-size: 12px; color: var(--text-dim); display: flex; align-items: center; gap: 6px; }
+    .status-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--accent); display: inline-block; }
+    .status-dot.inactive { background: var(--error); }
+
+    .container { display: grid; grid-template-columns: 1fr 1fr; height: calc(100vh - 57px); }
+
+    .panel { border-right: 1px solid var(--border); display: flex; flex-direction: column; overflow: hidden; }
+    .panel-header { padding: 16px 20px; border-bottom: 1px solid var(--border); background: var(--bg-secondary); }
+    .panel-title {
+      font-family: 'JetBrains Mono', monospace; font-size: 11px; font-weight: 600;
+      text-transform: uppercase; letter-spacing: 1.5px; color: var(--text-dim); margin-bottom: 12px;
+    }
+    .search-row { display: flex; gap: 8px; }
+    .search-input {
+      flex: 1; font-family: 'JetBrains Mono', monospace; font-size: 13px;
+      padding: 8px 12px; background: var(--bg-primary); border: 1px solid var(--border);
+      border-radius: 6px; color: var(--text-primary); outline: none; transition: border-color 0.15s;
+    }
+    .search-input:focus { border-color: var(--accent-dim); }
+    .search-input::placeholder { color: var(--text-dim); }
+
+    .btn {
+      font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 600;
+      padding: 8px 16px; border-radius: 6px; border: 1px solid var(--border);
+      background: var(--bg-tertiary); color: var(--text-primary); cursor: pointer;
+      transition: all 0.15s; white-space: nowrap;
+    }
+    .btn:hover { background: var(--bg-hover); border-color: var(--border-bright); }
+    .btn-accent { background: var(--accent-dim); border-color: var(--accent); color: white; }
+    .btn-accent:hover { background: var(--accent); color: var(--bg-primary); }
+
+    .commit-list { flex: 1; overflow-y: auto; scrollbar-width: thin; scrollbar-color: var(--border) transparent; }
+    .commit-item {
+      padding: 12px 20px; border-bottom: 1px solid var(--border);
+      cursor: pointer; transition: background 0.1s; display: flex; gap: 12px; align-items: flex-start;
+    }
+    .commit-item:hover { background: var(--bg-secondary); }
+    .commit-item.active { background: var(--accent-glow); border-left: 2px solid var(--accent); }
+    .commit-sha { font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--accent); flex-shrink: 0; margin-top: 2px; }
+    .commit-info { flex: 1; min-width: 0; }
+    .commit-message { font-size: 13px; color: var(--text-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; line-height: 1.4; }
+    .commit-meta { font-size: 11px; color: var(--text-dim); margin-top: 3px; }
+    .commit-tuf-badge { font-family: 'JetBrains Mono', monospace; font-size: 9px; padding: 2px 6px; border-radius: 3px; flex-shrink: 0; margin-top: 2px; }
+    .badge-available { background: rgba(72,213,151,0.12); color: var(--accent); border: 1px solid var(--accent-dim); }
+    .badge-checking { background: rgba(232,168,56,0.12); color: var(--warning); border: 1px solid rgba(232,168,56,0.3); }
+    .badge-unavailable { background: rgba(232,84,84,0.08); color: var(--text-dim); border: 1px solid var(--border); }
+
+    .pagination { display: flex; gap: 8px; padding: 12px 20px; border-top: 1px solid var(--border); background: var(--bg-secondary); justify-content: center; }
+    .pagination .btn { font-size: 12px; padding: 6px 12px; }
+
+    .detail-panel { display: flex; flex-direction: column; overflow: hidden; }
+    .detail-content { flex: 1; overflow-y: auto; padding: 24px; scrollbar-width: thin; scrollbar-color: var(--border) transparent; }
+    .detail-empty { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; color: var(--text-dim); gap: 12px; }
+    .detail-empty-icon { font-size: 48px; opacity: 0.3; }
+    .detail-empty p { font-size: 14px; }
+    .detail-commit-sha {
+      font-family: 'JetBrains Mono', monospace; font-size: 14px; color: var(--accent);
+      margin-bottom: 8px; display: flex; align-items: center; gap: 8px;
+    }
+    .detail-commit-sha a { color: var(--accent); text-decoration: none; }
+    .detail-commit-sha a:hover { text-decoration: underline; }
+    .copy-btn {
+      font-size: 10px; padding: 2px 6px; cursor: pointer;
+      background: var(--bg-tertiary); border: 1px solid var(--border);
+      border-radius: 3px; color: var(--text-dim); transition: all 0.15s;
+    }
+    .copy-btn:hover { color: var(--text-primary); border-color: var(--border-bright); }
+
+    .section { margin-bottom: 24px; }
+    .section-title {
+      font-family: 'JetBrains Mono', monospace; font-size: 11px; font-weight: 600;
+      text-transform: uppercase; letter-spacing: 1.5px; color: var(--text-dim);
+      margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px solid var(--border);
+    }
+    .nas-path {
+      font-family: 'JetBrains Mono', monospace; font-size: 10px; color: var(--text-dim);
+      margin-bottom: 12px;
+    }
+
+    .artifact-card {
+      background: var(--bg-secondary); border: 1px solid var(--border); border-radius: 8px;
+      padding: 16px; margin-bottom: 8px; transition: border-color 0.15s;
+    }
+    .artifact-card:hover { border-color: var(--border-bright); }
+    .artifact-top { display: flex; align-items: center; justify-content: space-between; }
+    .artifact-info { display: flex; flex-direction: column; gap: 4px; }
+    .artifact-name { font-family: 'JetBrains Mono', monospace; font-size: 13px; font-weight: 600; color: var(--text-primary); }
+    .artifact-detail { font-size: 11px; color: var(--text-dim); }
+    .artifact-size {
+      font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--text-secondary);
+      background: var(--bg-primary); padding: 2px 6px; border-radius: 3px; border: 1px solid var(--border);
+    }
+    .artifact-actions { display: flex; gap: 8px; align-items: center; }
+
+    .download-btn {
+      font-family: 'JetBrains Mono', monospace; font-size: 11px; font-weight: 600;
+      padding: 7px 12px; background: var(--accent-dim); border: 1px solid var(--accent);
+      border-radius: 6px; color: white; cursor: pointer; transition: all 0.15s;
+      text-decoration: none; display: inline-flex; align-items: center; gap: 5px;
+    }
+    .download-btn:hover { background: var(--accent); color: var(--bg-primary); }
+    .download-btn svg { width: 12px; height: 12px; }
+
+    .save-btn {
+      font-family: 'JetBrains Mono', monospace; font-size: 11px; font-weight: 600;
+      padding: 7px 12px; background: var(--blue-dim); border: 1px solid var(--blue);
+      border-radius: 6px; color: white; cursor: pointer; transition: all 0.15s;
+      display: inline-flex; align-items: center; gap: 5px;
+    }
+    .save-btn:hover { background: var(--blue); color: var(--bg-primary); }
+    .save-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    .save-btn.saved { background: transparent; border-color: var(--accent); color: var(--accent); cursor: default; }
+    .save-btn svg { width: 12px; height: 12px; }
+
+    .cancel-btn {
+      font-family: 'JetBrains Mono', monospace; font-size: 11px; font-weight: 600;
+      padding: 7px 12px; background: rgba(232,84,84,0.15); border: 1px solid var(--error);
+      border-radius: 6px; color: var(--error); cursor: pointer; transition: all 0.15s;
+      display: inline-flex; align-items: center; gap: 5px;
+    }
+    .cancel-btn:hover { background: var(--error); color: white; }
+
+    .artifact-progress { margin-top: 10px; }
+    .progress-bar-outer { width: 100%; height: 5px; background: var(--bg-primary); border-radius: 3px; overflow: hidden; }
+    .progress-bar-inner { height: 100%; background: var(--blue); border-radius: 3px; transition: width 0.3s; }
+    .progress-text { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: var(--text-dim); margin-top: 4px; display: flex; justify-content: space-between; }
+
+    .manifest-viewer { background: var(--bg-primary); border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
+    .manifest-header {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 8px 12px; background: var(--bg-tertiary); border-bottom: 1px solid var(--border);
+    }
+    .manifest-header span { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--text-dim); }
+    .manifest-body {
+      padding: 12px 16px; font-family: 'JetBrains Mono', monospace; font-size: 12px;
+      line-height: 1.6; color: var(--text-secondary); max-height: 400px; overflow-y: auto;
+      white-space: pre-wrap; word-break: break-all; scrollbar-width: thin; scrollbar-color: var(--border) transparent;
+    }
+
+    .status-message { display: flex; align-items: center; gap: 10px; padding: 16px; border-radius: 8px; font-size: 13px; }
+    .status-loading { background: rgba(232,168,56,0.08); border: 1px solid rgba(232,168,56,0.2); color: var(--warning); }
+    .status-error { background: rgba(232,84,84,0.08); border: 1px solid rgba(232,84,84,0.2); color: var(--error); }
+    .status-unavailable { background: var(--bg-secondary); border: 1px solid var(--border); color: var(--text-secondary); }
+    .spinner { width: 16px; height: 16px; border: 2px solid var(--border); border-top-color: var(--warning); border-radius: 50%; animation: spin 0.6s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .sha-display {
+      font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--text-dim);
+      background: var(--bg-primary); padding: 8px 12px; border-radius: 4px;
+      border: 1px solid var(--border); word-break: break-all; margin-top: 8px;
+    }
+    .sha-label { color: var(--text-dim); font-size: 10px; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 4px; }
+
+    .info-row { display: flex; align-items: center; gap: 8px; padding: 10px 0; border-bottom: 1px solid var(--border); font-size: 13px; }
+    .info-label { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--text-dim); min-width: 120px; }
+    .info-value { font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--text-secondary); }
+
+    @media (max-width: 900px) {
+      .container { grid-template-columns: 1fr; grid-template-rows: 1fr 1fr; }
+      .panel { border-right: none; border-bottom: 1px solid var(--border); }
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <div class="header-left">
+      <div class="logo">omicron<span>/tuf</span></div>
+      <div class="header-badge">buildomat</div>
+    </div>
+    <div class="header-status" id="headerStatus"><span class="status-dot inactive"></span> checking...</div>
+  </div>
+  <div class="container">
+    <div class="panel">
+      <div class="panel-header">
+        <div class="panel-title">Commits — oxidecomputer/omicron</div>
+        <div class="search-row">
+          <input type="text" class="search-input" id="commitInput" placeholder="Paste a commit SHA or search..." />
+          <button class="btn btn-accent" id="lookupBtn">Lookup</button>
+        </div>
+      </div>
+      <div class="commit-list" id="commitList"></div>
+      <div class="pagination" id="pagination"></div>
+    </div>
+    <div class="detail-panel">
+      <div class="panel-header"><div class="panel-title">TUF Artifacts</div></div>
+      <div class="detail-content" id="detailContent">
+        <div class="detail-empty">
+          <div class="detail-empty-icon">◇</div>
+          <p>Select a commit to view TUF artifacts</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const $ = s => document.querySelector(s);
+    const commitList = $('#commitList'), detailContent = $('#detailContent');
+    const commitInput = $('#commitInput'), lookupBtn = $('#lookupBtn');
+    const pagination = $('#pagination'), headerStatus = $('#headerStatus');
+
+    let currentPage = 1, selectedCommit = null, tufCache = {}, diskEnabled = false, nasPath = '';
+    const activePollers = new Map();
+
+    const DL_ICON = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>`;
+
+    function formatBytes(bytes) {
+      if (!bytes || bytes === 0) return '—';
+      if (bytes < 1024) return bytes + ' B';
+      if (bytes < 1048576) return (bytes / 1024).toFixed(1) + ' KB';
+      if (bytes < 1073741824) return (bytes / 1048576).toFixed(1) + ' MB';
+      return (bytes / 1073741824).toFixed(2) + ' GB';
+    }
+
+    async function init() {
+      const health = await api('/api/health');
+      diskEnabled = !!health.downloadDir;
+      nasPath = health.downloadDir || '';
+      const parts = [];
+      parts.push(health.hasGithubToken
+        ? '<span class="status-dot"></span> GitHub'
+        : '<span class="status-dot inactive"></span> No token');
+      if (diskEnabled) parts.push('· NAS: ' + nasPath);
+      headerStatus.innerHTML = parts.join(' ');
+      loadCommits(1);
+    }
+
+    async function api(url, opts) { return (await fetch(url, opts)).json(); }
+
+    async function loadCommits(page) {
+      currentPage = page;
+      commitList.innerHTML = `<div style="padding:40px;text-align:center"><div class="status-message status-loading"><div class="spinner"></div> Loading commits...</div></div>`;
+      const data = await api(`/api/commits?page=${page}&per_page=25`);
+      if (data.error) {
+        commitList.innerHTML = `<div style="padding:20px"><div class="status-message status-error">Failed: ${esc(data.error)}</div></div>`;
+        return;
+      }
+      renderCommits(data.commits);
+      renderPagination(data.pagination);
+      for (const c of data.commits) checkTufAvailability(c.sha);
+    }
+
+    function renderCommits(commits) {
+      commitList.innerHTML = commits.map(c => `
+        <div class="commit-item ${selectedCommit === c.sha ? 'active' : ''}" data-sha="${c.sha}" onclick="selectCommit('${c.sha}')">
+          <div class="commit-sha">${c.shortSha}</div>
+          <div class="commit-info">
+            <div class="commit-message">${esc(c.message)}</div>
+            <div class="commit-meta">${c.author} · ${timeAgo(c.date)}</div>
+          </div>
+          <div class="commit-tuf-badge badge-checking" id="badge-${c.sha}">…</div>
+        </div>`).join('');
+    }
+
+    async function checkTufAvailability(sha) {
+      if (tufCache[sha]) { updateBadge(sha, tufCache[sha].available); return; }
+      try {
+        const data = await api(`/api/tuf-status/${sha}`);
+        tufCache[sha] = data;
+        updateBadge(sha, data.available);
+      } catch { updateBadge(sha, false); }
+    }
+
+    function updateBadge(sha, available) {
+      const b = document.getElementById(`badge-${sha}`);
+      if (!b) return;
+      b.className = 'commit-tuf-badge ' + (available ? 'badge-available' : 'badge-unavailable');
+      b.textContent = available ? 'TUF' : '—';
+    }
+
+    async function selectCommit(sha) {
+      selectedCommit = sha;
+      document.querySelectorAll('.commit-item').forEach(el => el.classList.toggle('active', el.dataset.sha === sha));
+      detailContent.innerHTML = `<div class="status-message status-loading"><div class="spinner"></div> Checking TUF artifacts for ${sha.substring(0,12)}...</div>`;
+      let data = tufCache[sha];
+      if (!data) { data = await api(`/api/tuf-status/${sha}`); tufCache[sha] = data; }
+      renderDetail(sha, data);
+    }
+
+    function renderDetail(sha, data) {
+      if (!data.available) {
+        detailContent.innerHTML = `
+          <div style="margin-bottom:24px"><div class="detail-commit-sha">
+            <a href="https://github.com/oxidecomputer/omicron/commit/${sha}" target="_blank">${sha}</a>
+            <button class="copy-btn" onclick="copyText('${sha}')">copy</button>
+          </div></div>
+          <div class="status-message status-unavailable">TUF repo not available for this commit. The rot-all CI job may not have completed.</div>`;
+        return;
+      }
+
+      const shortSha = sha.substring(0, 12);
+      const artifacts = [
+        { file: 'repo.zip', name: 'tuf-mupdate.zip', detail: 'TUF repository bundle', size: data.repoSize },
+        { file: 'manifest.toml', name: 'manifest.toml', detail: 'TUF manifest', size: data.manifestSize },
+        { file: 'repo.zip.sha256.txt', name: 'repo.zip.sha256.txt', detail: 'SHA-256 checksum', size: null },
+      ];
+
+      let html = `
+        <div style="margin-bottom:24px"><div class="detail-commit-sha">
+          <a href="https://github.com/oxidecomputer/omicron/commit/${sha}" target="_blank">${sha}</a>
+          <button class="copy-btn" onclick="copyText('${sha}')">copy</button>
+        </div></div>
+        <div class="section">
+          <div class="section-title">Downloads</div>
+          ${diskEnabled ? `<div class="nas-path">NAS → ${esc(nasPath)}/${shortSha}/</div>` : ''}`;
+
+      for (const a of artifacts) {
+        const fileId = a.file.replace(/\./g, '-');
+        const onDisk = data.onDisk && data.onDisk[a.file];
+        const nasTitle = nasPath ? `${nasPath}/${shortSha}/${a.name}` : '';
+
+        let actions = '';
+        if (diskEnabled && onDisk) {
+          actions = `<a class="download-btn" href="/api/serve/${sha}/${a.file}" title="${esc(nasTitle)}">${DL_ICON} From NAS</a>`;
+        } else {
+          actions = `
+            ${diskEnabled ? `
+              <button class="save-btn" id="nas-${fileId}"
+                onclick="saveToDisk('${sha}','${a.file}')"
+                title="${esc(nasTitle)}">${DL_ICON} NAS
+              </button>` : ''}
+            <a class="download-btn" href="/api/download/${sha}/${a.file}" title="Download from Buildomat">${DL_ICON} Local</a>`;
+        }
+
+        html += `
+          <div class="artifact-card" id="card-${fileId}">
+            <div class="artifact-top">
+              <div class="artifact-info">
+                <div class="artifact-name">${a.name}</div>
+                <div class="artifact-detail">${a.detail}${a.size ? ' · <span class="artifact-size">' + formatBytes(a.size) + '</span>' : ''}</div>
+              </div>
+              <div class="artifact-actions">${actions}</div>
+            </div>
+            <div class="artifact-progress" id="progress-${fileId}"></div>
+          </div>`;
+      }
+
+      html += `</div>`;
+
+      if (data.sha256) {
+        html += `<div class="section"><div class="section-title">Verification</div>
+          <div class="sha-label">SHA-256</div><div class="sha-display">${esc(data.sha256)}</div></div>`;
+      }
+      if (data.dvtDockCommit) {
+        html += `<div class="section"><div class="section-title">Related</div>
+          <div class="info-row"><span class="info-label">dvt_dock</span><span class="info-value">${esc(data.dvtDockCommit)}</span></div></div>`;
+      }
+      if (data.manifest) {
+        html += `<div class="section"><div class="section-title">Manifest</div>
+          <div class="manifest-viewer"><div class="manifest-header"><span>manifest.toml</span>
+            <button class="copy-btn" onclick="copyText(document.getElementById('manifestText').textContent)">copy</button>
+          </div><div class="manifest-body" id="manifestText">${esc(data.manifest)}</div></div></div>`;
+      }
+
+      detailContent.innerHTML = html;
+    }
+
+    async function saveToDisk(sha, file) {
+      const fileId = file.replace(/\./g, '-');
+      const nasBtn = document.getElementById(`nas-${fileId}`);
+      if (nasBtn) { nasBtn.disabled = true; nasBtn.innerHTML = DL_ICON + ' Starting...'; }
+
+      await api(`/api/save-to-disk/${sha}/${file}`, { method: 'POST' });
+      pollProgress(sha, file);
+    }
+
+    function pollProgress(sha, file) {
+      const fileId = file.replace(/\./g, '-');
+      const pollKey = `${sha}/${file}`;
+
+      if (activePollers.has(pollKey)) clearTimeout(activePollers.get(pollKey));
+
+      const poll = async () => {
+        const data = await api(`/api/save-progress/${sha}/${file}`);
+        const progressEl = document.getElementById(`progress-${fileId}`);
+        const nasBtn = document.getElementById(`nas-${fileId}`);
+
+        if (data.status === 'downloading') {
+          if (progressEl) {
+            progressEl.innerHTML = `
+              <div class="progress-bar-outer"><div class="progress-bar-inner" style="width:${data.progress}%"></div></div>
+              <div class="progress-text">
+                <span>${data.progress}% · ${formatBytes(data.downloadedBytes)} / ${formatBytes(data.totalBytes)}</span>
+                <button class="cancel-btn" onclick="cancelDownload('${sha}','${file}')">✕ Cancel</button>
+              </div>`;
+          }
+          if (nasBtn) { nasBtn.disabled = true; nasBtn.innerHTML = `${data.progress}%`; }
+          activePollers.set(pollKey, setTimeout(poll, 500));
+        } else if (data.status === 'complete') {
+          if (progressEl) progressEl.innerHTML = '';
+          // Replace entire actions with "From NAS" button
+          const card = document.getElementById(`card-${fileId}`);
+          if (card) {
+            const actionsEl = card.querySelector('.artifact-actions');
+            if (actionsEl) {
+              const nasTitle = nasPath ? `${nasPath}/${sha.substring(0,12)}/${file}` : '';
+              actionsEl.innerHTML = `<a class="download-btn" href="/api/serve/${sha}/${file}" title="${esc(nasTitle)}">${DL_ICON} From NAS</a>`;
+            }
+          }
+          if (tufCache[sha] && tufCache[sha].onDisk) tufCache[sha].onDisk[file] = true;
+          activePollers.delete(pollKey);
+        } else if (data.status === 'error') {
+          if (progressEl) {
+            progressEl.innerHTML = `<div style="font-size:11px;color:var(--error);margin-top:6px">Failed: ${esc(data.error || 'unknown')}</div>`;
+          }
+          if (nasBtn) { nasBtn.disabled = false; nasBtn.innerHTML = DL_ICON + ' Retry'; }
+          activePollers.delete(pollKey);
+        } else if (data.status === 'cancelled') {
+          if (progressEl) progressEl.innerHTML = '';
+          if (nasBtn) { nasBtn.disabled = false; nasBtn.className = 'save-btn'; nasBtn.innerHTML = DL_ICON + ' NAS'; }
+          activePollers.delete(pollKey);
+        } else {
+          activePollers.delete(pollKey);
+        }
+      };
+      poll();
+    }
+
+    async function cancelDownload(sha, file) {
+      const fileId = file.replace(/\./g, '-');
+      const pollKey = `${sha}/${file}`;
+
+      if (activePollers.has(pollKey)) {
+        clearTimeout(activePollers.get(pollKey));
+        activePollers.delete(pollKey);
+      }
+
+      await api(`/api/cancel-download/${sha}/${file}`, { method: 'POST' });
+
+      const progressEl = document.getElementById(`progress-${fileId}`);
+      const nasBtn = document.getElementById(`nas-${fileId}`);
+      if (progressEl) progressEl.innerHTML = '';
+      if (nasBtn) { nasBtn.disabled = false; nasBtn.className = 'save-btn'; nasBtn.innerHTML = DL_ICON + ' NAS'; }
+    }
+
+    function renderPagination(pag) {
+      let html = '';
+      if (pag.prev) html += `<button class="btn" onclick="loadCommits(${pag.prev})">← Prev</button>`;
+      html += `<button class="btn" disabled style="opacity:0.5">Page ${currentPage}</button>`;
+      if (pag.next) html += `<button class="btn" onclick="loadCommits(${pag.next})">Next →</button>`;
+      pagination.innerHTML = html;
+    }
+
+    lookupBtn.addEventListener('click', () => { const v = commitInput.value.trim(); if (v.length >= 7) selectCommit(v); });
+    commitInput.addEventListener('keydown', e => { if (e.key === 'Enter') lookupBtn.click(); });
+
+    function esc(s) { const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
+    function copyText(t) { navigator.clipboard.writeText(t); }
+    function timeAgo(d) {
+      const diff = Date.now() - new Date(d).getTime(), m = Math.floor(diff/60000);
+      if (m < 60) return m + 'm ago';
+      const h = Math.floor(m/60); if (h < 24) return h + 'h ago';
+      const dy = Math.floor(h/24); if (dy < 30) return dy + 'd ago';
+      return new Date(d).toLocaleDateString();
+    }
+
+    init();
+  </script>
+</body>
+</html>
