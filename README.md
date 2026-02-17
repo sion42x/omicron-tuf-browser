@@ -2,51 +2,33 @@
 
 A web UI for browsing and downloading [Omicron](https://github.com/oxidecomputer/omicron) TUF repository artifacts from [Buildomat](https://buildomat.eng.oxide.computer).
 
-<img width="1461" height="905" alt="image" src="https://github.com/user-attachments/assets/03fdfa2a-f5bd-43b0-9317-59001660d120" />
+<img width="50%" height="50%" alt="image" src="https://github.com/user-attachments/assets/03fdfa2a-f5bd-43b0-9317-59001660d120" />
+
+![Screenshot](screenshot.png)
 
 ## Features
 
 - Browse recent commits on `oxidecomputer/omicron` with GitHub API integration
 - See which commits have TUF repo artifacts available
-- Download `tuf-mupdate.zip`, `manifest.toml`, and `repo.zip.sha256.txt`
-- Optional server-side storage: save artifacts to a NAS or local disk with progress tracking and cancel support
+- Optional server-side storage: save artifacts to a NAS or local disk with progress tracking
 - Serve previously downloaded artifacts directly from disk
 
 ## Quick Start
 
-```bash
-npm install
-GITHUB_TOKEN=ghp_yourtoken node server.js
-```
-
-Open `http://localhost:3000`.
-
-## Environment Variables
-
-| Variable | Required | Description |
-|---|---|---|
-| `GITHUB_TOKEN` | Yes | GitHub personal access token for browsing commits (needs `repo` or `public_repo` scope) |
-| `DOWNLOAD_DIR` | No | Path for server-side artifact storage. Enables "Save to NAS" functionality. Each commit's artifacts are saved to `DOWNLOAD_DIR/<commit-sha>/` |
-| `PORT` | No | Server port (default: `3000`) |
-
-## Docker
-
-### Build
-
-```bash
-docker build -t omicron-tuf-browser .
-```
-
-### Run (browser downloads only)
+A pre-built image is available on GitHub Container Registry:
 
 ```bash
 docker run -d --name omicron-tuf \
   -p 3000:3000 \
   -e GITHUB_TOKEN=ghp_yourtoken \
-  omicron-tuf-browser
+  ghcr.io/sion42x/omicron-tuf-browser:latest
 ```
 
-### Run (with server-side storage)
+Open `http://localhost:3000`.
+
+### With server-side storage
+
+Mount any directory or dataset for persistent artifact storage:
 
 ```bash
 docker run -d --name omicron-tuf \
@@ -54,41 +36,71 @@ docker run -d --name omicron-tuf \
   -e GITHUB_TOKEN=ghp_yourtoken \
   -e DOWNLOAD_DIR=/downloads \
   -v /path/to/storage:/downloads \
-  omicron-tuf-browser
+  ghcr.io/sion42x/omicron-tuf-browser:latest
 ```
 
-Artifacts are saved to `/path/to/storage/<12-char-commit-sha>/` with the following files:
+When `DOWNLOAD_DIR` is configured, each commit's artifacts are saved to a subdirectory named by commit SHA:
 
-- `tuf-mupdate.zip` — the TUF repository bundle
-- `manifest.toml` — the TUF manifest
-- `tuf-mupdate.zip.sha256.txt` — SHA-256 checksum
-- `omicron_commit` — full commit hash
+```
+/path/to/storage/
+  79fac7deb9ac/
+    tuf-mupdate.zip
+    manifest.toml
+    tuf-mupdate.zip.sha256.txt
+```
+
+Files saved to storage are served directly from disk on subsequent downloads.
+
+## Environment Variables
+
+| Variable | Required | Description |
+|---|---|---|
+| `GITHUB_TOKEN` | Yes | GitHub personal access token (needs `public_repo` scope) for browsing commits |
+| `DOWNLOAD_DIR` | No | Path for server-side artifact storage. Enables "Save to NAS" functionality |
+| `PORT` | No | Server port (default: `3000`) |
+
+## Running Without Docker
+
+```bash
+npm install
+GITHUB_TOKEN=ghp_yourtoken node server.js
+```
 
 ## Deploying on TrueNAS Scale
 
-1. Push the image to a container registry (e.g. GHCR) or build locally on TrueNAS
-2. Deploy as a **Custom App**:
-   - **Image:** `ghcr.io/youruser/omicron-tuf-browser:latest`
-   - **Port:** host `30080` → container `30080`
-   - **Environment variables:** `GITHUB_TOKEN`, `DOWNLOAD_DIR=/downloads`
-   - **Storage:** mount a dataset to `/downloads`
-3. Optionally put it behind a reverse proxy (Caddy, nginx, etc.) for HTTPS
+This app slots in naturally as a TrueNAS or other system custom app with a dataset-backed download directory.
 
-### Building for amd64 from Apple Silicon
+1. In **Apps → Discover Apps → Custom App**, configure:
+   - **Image:** `ghcr.io/sion42x/omicron-tuf-browser:latest`
+   - **Port:** host `30080` : container `30080`
+   - **Environment variables:**
+     - `GITHUB_TOKEN`: your GitHub token
+     - `DOWNLOAD_DIR`: `/downloads`
+     - `PORT`: `30080`
+   - **Storage:** add a host path mount mapping a dataset (e.g. `/mnt/pool/tuf-downloads`) to `/downloads`
+
+2. Ensure the storage dataset is writable by the container user (UID 568 on TrueNAS):
+   ```bash
+   sudo chown 568:568 /mnt/pool/tuf-downloads
+   ```
+
+3. Optionally put it behind a reverse proxy (Caddy, nginx, Tailscale Serve, etc.) for HTTPS with a custom domain.
+
+## Deploying Anywhere Else
+
+The app runs anywhere Docker runs. Point `DOWNLOAD_DIR` at any persistent storage — a local directory, an NFS mount, an iSCSI volume, whatever you have. The only external dependencies are network access to `buildomat.eng.oxide.computer` and `api.github.com`.
+
+## Building the Image
+
+```bash
+docker build -t omicron-tuf-browser .
+```
+
+### Cross-platform (e.g. building for amd64 from Apple Silicon)
 
 ```bash
 docker buildx build --platform linux/amd64 -t ghcr.io/youruser/omicron-tuf-browser:latest --push .
 ```
-
-## How It Works
-
-The app wraps the public [Buildomat](https://buildomat.eng.oxide.computer/public) API. For a given Omicron commit, TUF artifacts are available at:
-
-```
-https://buildomat.eng.oxide.computer/public/file/oxidecomputer/omicron/rot-all/<commit>/
-```
-
-The GitHub API is used to list recent commits and provide a browsable interface. No GitHub API access is needed for downloading artifacts.
 
 ## License
 
