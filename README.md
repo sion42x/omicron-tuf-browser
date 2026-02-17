@@ -2,9 +2,7 @@
 
 A web UI for browsing and downloading [Omicron](https://github.com/oxidecomputer/omicron) TUF repository artifacts from [Buildomat](https://buildomat.eng.oxide.computer).
 
-<img width="50%" height="50%" alt="image" src="https://github.com/user-attachments/assets/03fdfa2a-f5bd-43b0-9317-59001660d120" />
-
-![Screenshot](screenshot.png)
+<img width="75%" height="75%" alt="image" src="https://github.com/user-attachments/assets/03fdfa2a-f5bd-43b0-9317-59001660d120" />
 
 ## Features
 
