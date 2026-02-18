@@ -276,7 +276,7 @@
       parts.push(health.hasGithubToken
         ? '<span class="status-dot"></span> GitHub'
         : '<span class="status-dot inactive"></span> No token');
-      if (diskEnabled) parts.push('· NAS: ' + nasPath);
+      if (diskEnabled) parts.push('· Host Storage: ' + nasPath);
       headerStatus.innerHTML = parts.join(' ');
       loadCommits(1);
     }
@@ -358,7 +358,7 @@
         </div></div>
         <div class="section">
           <div class="section-title">Downloads</div>
-          ${diskEnabled ? `<div class="nas-path">NAS → ${esc(nasPath)}/${shortSha}/</div>` : ''}`;
+          ${diskEnabled ? `<div class="nas-path">Host Storage → ${esc(nasPath)}/${shortSha}/</div>` : ''}`;
 
       for (const a of artifacts) {
         const fileId = a.file.replace(/\./g, '-');
@@ -367,13 +367,13 @@
 
         let actions = '';
         if (diskEnabled && onDisk) {
-          actions = `<a class="download-btn" href="/api/serve/${sha}/${a.file}" title="${esc(nasTitle)}">${DL_ICON} From NAS</a>`;
+          actions = `<a class="download-btn" href="/api/serve/${sha}/${a.file}" title="${esc(nasTitle)}">${DL_ICON} From Host Storage</a>`;
         } else {
           actions = `
             ${diskEnabled ? `
               <button class="save-btn" id="nas-${fileId}"
                 onclick="saveToDisk('${sha}','${a.file}')"
-                title="${esc(nasTitle)}">${DL_ICON} NAS
+                title="${esc(nasTitle)}">${DL_ICON} Host Storage
               </button>` : ''}
             <a class="download-btn" href="/api/download/${sha}/${a.file}" title="Download from Buildomat">${DL_ICON} Local</a>`;
         }
@@ -444,13 +444,13 @@
           activePollers.set(pollKey, setTimeout(poll, 500));
         } else if (data.status === 'complete') {
           if (progressEl) progressEl.innerHTML = '';
-          // Replace entire actions with "From NAS" button
+          // Replace entire actions with "From Host Storage" button
           const card = document.getElementById(`card-${fileId}`);
           if (card) {
             const actionsEl = card.querySelector('.artifact-actions');
             if (actionsEl) {
               const nasTitle = nasPath ? `${nasPath}/${sha.substring(0,12)}/${file}` : '';
-              actionsEl.innerHTML = `<a class="download-btn" href="/api/serve/${sha}/${file}" title="${esc(nasTitle)}">${DL_ICON} From NAS</a>`;
+              actionsEl.innerHTML = `<a class="download-btn" href="/api/serve/${sha}/${file}" title="${esc(nasTitle)}">${DL_ICON} From Host Storage</a>`;
             }
           }
           if (tufCache[sha] && tufCache[sha].onDisk) tufCache[sha].onDisk[file] = true;
@@ -463,7 +463,7 @@
           activePollers.delete(pollKey);
         } else if (data.status === 'cancelled') {
           if (progressEl) progressEl.innerHTML = '';
-          if (nasBtn) { nasBtn.disabled = false; nasBtn.className = 'save-btn'; nasBtn.innerHTML = DL_ICON + ' NAS'; }
+          if (nasBtn) { nasBtn.disabled = false; nasBtn.className = 'save-btn'; nasBtn.innerHTML = DL_ICON + ' Host Storage'; }
           activePollers.delete(pollKey);
         } else {
           activePollers.delete(pollKey);
@@ -486,7 +486,7 @@
       const progressEl = document.getElementById(`progress-${fileId}`);
       const nasBtn = document.getElementById(`nas-${fileId}`);
       if (progressEl) progressEl.innerHTML = '';
-      if (nasBtn) { nasBtn.disabled = false; nasBtn.className = 'save-btn'; nasBtn.innerHTML = DL_ICON + ' NAS'; }
+      if (nasBtn) { nasBtn.disabled = false; nasBtn.className = 'save-btn'; nasBtn.innerHTML = DL_ICON + ' Host Storage'; }
     }
 
     function renderPagination(pag) {

@@ -65,7 +65,7 @@ app.get('/api/serve/:commit/:file', (req, res) => {
   const filePath = path.join(DOWNLOAD_DIR, shortSha, localName);
 
   if (!fs.existsSync(filePath)) {
-    return res.status(404).json({ error: 'File not on NAS' });
+    return res.status(404).json({ error: 'File not on Host Storage' });
   }
 
   const stat = fs.statSync(filePath);
